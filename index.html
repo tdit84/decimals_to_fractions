@@ -100,7 +100,7 @@
   <script>
     var starCount = 0;
 
-    // Update the star counter display
+    // Helper function to update star counter display
     function updateStarCounter() {
       document.getElementById("starCounter").innerHTML = "⭐ " + starCount;
     }
@@ -110,63 +110,63 @@
       return '<span class="fraction"><span class="top">' + numerator + '</span><span class="bottom">' + denominator + '</span></span>';
     }
 
-    // Generates a new question converting a decimal to a fraction.
+    // Compute the greatest common divisor (GCD)
+    function gcd(a, b) {
+      return b === 0 ? a : gcd(b, a % b);
+    }
+
+    // Return the fraction in simplest form as a string "num/denom"
+    function simplifyFraction(n, d) {
+      var g = gcd(n, d);
+      return (n / g) + "/" + (d / g);
+    }
+
+    // Generates a new question with fractions in simplest form
     function generateQuestion() {
-      // Clear any previous message.
       document.getElementById("message").innerHTML = "";
-      
-      // Pick a denominator from a list of common ones (avoiding non-terminating decimals)
       var denominators = [4, 5, 8, 10];
       var denominator = denominators[Math.floor(Math.random() * denominators.length)];
-      // Ensure numerator is at least 1 and less than the denominator.
       var numerator = Math.floor(Math.random() * (denominator - 1)) + 1;
       var decimalValue = (numerator / denominator).toFixed(2);
-      var correctFraction = numerator + "/" + denominator;
+      var correctFraction = simplifyFraction(numerator, denominator);
 
       document.getElementById("question").innerHTML =
         "Convert <b>" + decimalValue + "</b> to a fraction:";
-
-      // Draw the visual fraction bar.
       generateVisual(numerator, denominator);
 
-      // Generate choices (one correct, three wrong)
+      // Generate choices ensuring no duplicate simplified fractions.
       var choices = [];
       choices.push(correctFraction);
-      
+
       while (choices.length < 4) {
-        var option;
-        // With 50% chance, try adjusting the numerator by a small offset
+        var candidate = null;
         if (Math.random() < 0.5) {
-          var offset = Math.floor(Math.random() * 5) - 2; // offset between -2 and 2
+          var offset = Math.floor(Math.random() * 5) - 2;
           if (offset === 0) { offset = 1; }
           var newNumerator = numerator + offset;
           if (newNumerator >= 1 && newNumerator < denominator) {
-            option = newNumerator + "/" + denominator;
+            candidate = simplifyFraction(newNumerator, denominator);
           }
         }
-        // Otherwise, choose a different denominator from the list and compute a close numerator
-        if (!option) {
+        if (!candidate) {
           var newDenom = denominators[Math.floor(Math.random() * denominators.length)];
           while (newDenom === denominator) {
             newDenom = denominators[Math.floor(Math.random() * denominators.length)];
           }
-          // Adjust numerator to be close to the original decimal value
           var newNumerator = Math.floor((numerator / denominator) * newDenom);
           if (newNumerator < 1) { newNumerator = 1; }
           if (newNumerator >= newDenom) { newNumerator = newDenom - 1; }
-          option = newNumerator + "/" + newDenom;
+          candidate = simplifyFraction(newNumerator, newDenom);
         }
-        if (choices.indexOf(option) === -1) {
-          choices.push(option);
+        if (choices.indexOf(candidate) === -1) {
+          choices.push(candidate);
         }
       }
 
-      // Shuffle the choices array
       shuffleArray(choices);
 
       var choicesDiv = document.getElementById("choices");
       choicesDiv.innerHTML = "";
-
       for (var i = 0; i < choices.length; i++) {
         var choice = choices[i];
         var parts = choice.split("/");
@@ -194,7 +194,7 @@
       }
     }
 
-    // Draws a visual fraction bar where a single row of segments is colored.
+    // Draws a visual fraction bar
     function generateVisual(numerator, denominator) {
       var visualDiv = document.getElementById("visual");
       visualDiv.innerHTML = "";
@@ -211,7 +211,7 @@
       visualDiv.appendChild(line);
     }
 
-    // Fisher-Yates shuffle to randomize choices
+    // Fisher-Yates shuffle algorithm to randomize choices
     function shuffleArray(array) {
       for (var i = array.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
