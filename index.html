@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Decimal to Fraction</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+    }
+    .choices {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .choice {
+      padding: 10px 20px;
+      border: 2px solid black;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 18px;
+      background-color: #fff;
+      transition: background-color 0.3s;
+    }
+    .choice:hover {
+      background-color: #f0f0f0;
+    }
+    .correct {
+      background-color: lightgreen !important;
+    }
+    .incorrect {
+      background-color: lightcoral !important;
+    }
+    .visual {
+      margin-top: 20px;
+    }
+    .line {
+      display: flex;
+      border: 2px solid black;
+      height: 30px;
+      width: 200px;
+      margin: 0 auto;
+    }
+    .segment {
+      flex: 1;
+      border-right: 1px solid black;
+      background-color: white;
+    }
+    .segment:last-child {
+      border-right: none;
+    }
+    #question {
+      font-size: 22px;
+      margin: 20px;
+    }
+    .fraction {
+      display: inline-block;
+      text-align: center;
+      vertical-align: middle;
+      margin: 0 2px;
+    }
+    .fraction .top {
+      display: block;
+      border-bottom: 1px solid #000;
+      padding: 0 2px;
+    }
+    .fraction .bottom {
+      display: block;
+      padding: 0 2px;
+    }
+    #feedback {
+      font-size: 20px;
+      margin: 20px;
+    }
+    #starCounter {
+      display: inline-block;
+      margin-right: 20px;
+    }
+    #message {
+      display: inline-block;
+      height: 24px; /* reserve space */
+    }
+  </style>
+</head>
+<body>
+  <h1>Decimal to Fraction</h1>
+  <div id="question"></div>
+  <div class="visual" id="visual"></div>
+  <div class="choices" id="choices"></div>
+  <div id="feedback">
+    <span id="starCounter">⭐ 0</span>
+    <span id="message"></span>
+  </div>
+  
+  <script>
+    var starCount = 0;
+
+    // Update the star counter display
+    function updateStarCounter() {
+      document.getElementById("starCounter").innerHTML = "⭐ " + starCount;
+    }
+
+    // Render a fraction in vertical layout
+    function renderFraction(numerator, denominator) {
+      return '<span class="fraction"><span class="top">' + numerator + '</span><span class="bottom">' + denominator + '</span></span>';
+    }
+
+    // Generates a new question converting a decimal to a fraction.
+    function generateQuestion() {
+      // Clear any previous message.
+      document.getElementById("message").innerHTML = "";
+      
+      // Pick a denominator from a list of common ones (avoiding non-terminating decimals)
+      var denominators = [4, 5, 8, 10];
+      var denominator = denominators[Math.floor(Math.random() * denominators.length)];
+      // Ensure numerator is at least 1 and less than the denominator.
+      var numerator = Math.floor(Math.random() * (denominator - 1)) + 1;
+      var decimalValue = (numerator / denominator).toFixed(2);
+      var correctFraction = numerator + "/" + denominator;
+
+      document.getElementById("question").innerHTML =
+        "Convert <b>" + decimalValue + "</b> to a fraction:";
+
+      // Draw the visual fraction bar.
+      generateVisual(numerator, denominator);
+
+      // Generate choices (one correct, three wrong)
+      var choices = [];
+      choices.push(correctFraction);
+      
+      while (choices.length < 4) {
+        var option;
+        // With 50% chance, try adjusting the numerator by a small offset
+        if (Math.random() < 0.5) {
+          var offset = Math.floor(Math.random() * 5) - 2; // offset between -2 and 2
+          if (offset === 0) { offset = 1; }
+          var newNumerator = numerator + offset;
+          if (newNumerator >= 1 && newNumerator < denominator) {
+            option = newNumerator + "/" + denominator;
+          }
+        }
+        // Otherwise, choose a different denominator from the list and compute a close numerator
+        if (!option) {
+          var newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+          while (newDenom === denominator) {
+            newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+          }
+          // Adjust numerator to be close to the original decimal value
+          var newNumerator = Math.floor((numerator / denominator) * newDenom);
+          if (newNumerator < 1) { newNumerator = 1; }
+          if (newNumerator >= newDenom) { newNumerator = newDenom - 1; }
+          option = newNumerator + "/" + newDenom;
+        }
+        if (choices.indexOf(option) === -1) {
+          choices.push(option);
+        }
+      }
+
+      // Shuffle the choices array
+      shuffleArray(choices);
+
+      var choicesDiv = document.getElementById("choices");
+      choicesDiv.innerHTML = "";
+
+      for (var i = 0; i < choices.length; i++) {
+        var choice = choices[i];
+        var parts = choice.split("/");
+        var displayFraction = renderFraction(parts[0], parts[1]);
+        var btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerHTML = displayFraction;
+        btn.onclick = (function(selected, correct) {
+          return function() {
+            if (selected === correct) {
+              this.classList.add("correct");
+              document.getElementById("message").innerHTML = "Correct! 🎉";
+              starCount++;
+              updateStarCounter();
+              setTimeout(generateQuestion, 1000);
+            } else {
+              this.classList.add("incorrect");
+              document.getElementById("message").innerHTML = "Incorrect! ❌";
+              starCount--;
+              updateStarCounter();
+            }
+          };
+        })(choice, correctFraction);
+        choicesDiv.appendChild(btn);
+      }
+    }
+
+    // Draws a visual fraction bar where a single row of segments is colored.
+    function generateVisual(numerator, denominator) {
+      var visualDiv = document.getElementById("visual");
+      visualDiv.innerHTML = "";
+      var line = document.createElement("div");
+      line.className = "line";
+      for (var k = 0; k < denominator; k++) {
+        var segment = document.createElement("div");
+        segment.className = "segment";
+        if (k < numerator) {
+          segment.style.backgroundColor = "lightgray";
+        }
+        line.appendChild(segment);
+      }
+      visualDiv.appendChild(line);
+    }
+
+    // Fisher-Yates shuffle to randomize choices
+    function shuffleArray(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+    }
+
+    window.onload = function() {
+      updateStarCounter();
+      generateQuestion();
+    };
+  </script>
+</body>
+</html>
