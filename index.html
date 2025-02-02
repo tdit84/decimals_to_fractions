@@ -44,7 +44,7 @@
       border: 2px solid black;
       height: 30px;
       width: 200px;
-      margin: 0 auto;
+      margin: 5px auto;
     }
     .segment {
       flex: 1;
@@ -100,17 +100,17 @@
   <script>
     var starCount = 0;
 
-    // Helper function to update star counter display
+    // Update the star counter display
     function updateStarCounter() {
       document.getElementById("starCounter").innerHTML = "⭐ " + starCount;
     }
 
-    // Render a fraction in vertical layout
+    // Render a fraction vertically
     function renderFraction(numerator, denominator) {
       return '<span class="fraction"><span class="top">' + numerator + '</span><span class="bottom">' + denominator + '</span></span>';
     }
 
-    // Compute the greatest common divisor (GCD)
+    // Compute greatest common divisor (GCD)
     function gcd(a, b) {
       return b === 0 ? a : gcd(b, a % b);
     }
@@ -121,50 +121,155 @@
       return (n / g) + "/" + (d / g);
     }
 
-    // Generates a new question with fractions in simplest form
+    // Draw a visual for fractions (numbers < 1)
+    function generateVisual(numerator, denominator) {
+      var visualDiv = document.getElementById("visual");
+      visualDiv.innerHTML = "";
+      var line = document.createElement("div");
+      line.className = "line";
+      for (var k = 0; k < denominator; k++) {
+        var segment = document.createElement("div");
+        segment.className = "segment";
+        if (k < numerator) {
+          segment.style.backgroundColor = "lightgray";
+        }
+        line.appendChild(segment);
+      }
+      visualDiv.appendChild(line);
+    }
+
+    // Draw a visual for mixed numbers (numbers >= 1)
+    function generateVisualMixed(whole, numerator, denominator) {
+      var visualDiv = document.getElementById("visual");
+      visualDiv.innerHTML = "";
+      // Draw full rows for the whole part
+      for (var i = 0; i < whole; i++) {
+        var line = document.createElement("div");
+        line.className = "line";
+        for (var j = 0; j < denominator; j++) {
+          var seg = document.createElement("div");
+          seg.className = "segment";
+          seg.style.backgroundColor = "lightgray";
+          line.appendChild(seg);
+        }
+        visualDiv.appendChild(line);
+      }
+      // Draw one row for the fractional part
+      var fractionalLine = document.createElement("div");
+      fractionalLine.className = "line";
+      for (var k = 0; k < denominator; k++) {
+        var seg = document.createElement("div");
+        seg.className = "segment";
+        if (k < numerator) {
+          seg.style.backgroundColor = "lightgray";
+        }
+        fractionalLine.appendChild(seg);
+      }
+      visualDiv.appendChild(fractionalLine);
+    }
+
+    // Fisher-Yates shuffle to randomize choices
+    function shuffleArray(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+    }
+
+    // Generate a new question; easier questions (<7 stars) use decimals < 1,
+    // while harder questions (>=7 stars) use mixed numbers (decimals >= 1).
     function generateQuestion() {
       document.getElementById("message").innerHTML = "";
-      var denominators = [4, 5, 8, 10];
-      var denominator = denominators[Math.floor(Math.random() * denominators.length)];
-      var numerator = Math.floor(Math.random() * (denominator - 1)) + 1;
-      var decimalValue = (numerator / denominator).toFixed(2);
-      var correctFraction = simplifyFraction(numerator, denominator);
-
-      document.getElementById("question").innerHTML =
-        "Convert <b>" + decimalValue + "</b> to a fraction:";
-      generateVisual(numerator, denominator);
-
-      // Generate choices ensuring no duplicate simplified fractions.
       var choices = [];
-      choices.push(correctFraction);
-
-      while (choices.length < 4) {
-        var candidate = null;
-        if (Math.random() < 0.5) {
-          var offset = Math.floor(Math.random() * 5) - 2;
-          if (offset === 0) { offset = 1; }
-          var newNumerator = numerator + offset;
-          if (newNumerator >= 1 && newNumerator < denominator) {
-            candidate = simplifyFraction(newNumerator, denominator);
+      var correctFraction = "";
+      var questionText = "";
+      
+      if (starCount < 7) {
+        // Easier: generate a fraction less than 1
+        var denominators = [4, 5, 8, 10];
+        var denominator = denominators[Math.floor(Math.random() * denominators.length)];
+        var numerator = Math.floor(Math.random() * (denominator - 1)) + 1;
+        var decimalValue = (numerator / denominator).toFixed(2);
+        correctFraction = simplifyFraction(numerator, denominator);
+        questionText = "Convert <b>" + decimalValue + "</b> to a fraction:";
+        generateVisual(numerator, denominator);
+        
+        // Generate wrong answer choices (ensuring no duplicate simplified fractions)
+        while (choices.length < 4) {
+          var candidate = null;
+          if (Math.random() < 0.5) {
+            var offset = Math.floor(Math.random() * 5) - 2;
+            if (offset === 0) { offset = 1; }
+            var newNumerator = numerator + offset;
+            if (newNumerator >= 1 && newNumerator < denominator) {
+              candidate = simplifyFraction(newNumerator, denominator);
+            }
+          }
+          if (!candidate) {
+            var newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+            while (newDenom === denominator) {
+              newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+            }
+            var newNumerator = Math.floor((numerator / denominator) * newDenom);
+            if (newNumerator < 1) { newNumerator = 1; }
+            if (newNumerator >= newDenom) { newNumerator = newDenom - 1; }
+            candidate = simplifyFraction(newNumerator, newDenom);
+          }
+          if (choices.indexOf(candidate) === -1) {
+            choices.push(candidate);
           }
         }
-        if (!candidate) {
-          var newDenom = denominators[Math.floor(Math.random() * denominators.length)];
-          while (newDenom === denominator) {
-            newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+      } else {
+        // Harder: generate a mixed number (decimal >= 1)
+        var denominators = [4, 5, 8, 10];
+        var denominator = denominators[Math.floor(Math.random() * denominators.length)];
+        var whole = Math.floor(Math.random() * 5) + 1; // whole number between 1 and 5
+        var numerator = Math.floor(Math.random() * (denominator - 1)) + 1;
+        var decimalValue = (whole + numerator / denominator).toFixed(2);
+        var totalNumerator = whole * denominator + numerator;
+        correctFraction = simplifyFraction(totalNumerator, denominator);
+        questionText = "Convert <b>" + decimalValue + "</b> to an improper fraction:";
+        generateVisualMixed(whole, numerator, denominator);
+        
+        // Generate wrong answer choices for mixed numbers
+        while (choices.length < 4) {
+          var candidate = null;
+          if (Math.random() < 0.5) {
+            var offset = Math.floor(Math.random() * 5) - 2;
+            if (offset === 0) { offset = 1; }
+            var newTotal = totalNumerator + offset;
+            if (newTotal > 0) {
+              candidate = simplifyFraction(newTotal, denominator);
+            }
           }
-          var newNumerator = Math.floor((numerator / denominator) * newDenom);
-          if (newNumerator < 1) { newNumerator = 1; }
-          if (newNumerator >= newDenom) { newNumerator = newDenom - 1; }
-          candidate = simplifyFraction(newNumerator, newDenom);
-        }
-        if (choices.indexOf(candidate) === -1) {
-          choices.push(candidate);
+          if (!candidate) {
+            var newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+            while (newDenom === denominator) {
+              newDenom = denominators[Math.floor(Math.random() * denominators.length)];
+            }
+            var newTotal = Math.floor((totalNumerator / denominator) * newDenom);
+            if (newTotal < 1) { newTotal = 1; }
+            candidate = simplifyFraction(newTotal, newDenom);
+          }
+          if (choices.indexOf(candidate) === -1) {
+            choices.push(candidate);
+          }
         }
       }
-
+      
+      // Always include the correct answer first
+      choices.unshift(correctFraction);
+      // Remove duplicates if any, then keep only 4 choices.
+      choices = Array.from(new Set(choices)).slice(0,4);
+      // Ensure the correct answer is in the list.
+      if (choices.indexOf(correctFraction) === -1) {
+        choices[0] = correctFraction;
+      }
       shuffleArray(choices);
-
+      
+      document.getElementById("question").innerHTML = questionText;
       var choicesDiv = document.getElementById("choices");
       choicesDiv.innerHTML = "";
       for (var i = 0; i < choices.length; i++) {
@@ -191,33 +296,6 @@
           };
         })(choice, correctFraction);
         choicesDiv.appendChild(btn);
-      }
-    }
-
-    // Draws a visual fraction bar
-    function generateVisual(numerator, denominator) {
-      var visualDiv = document.getElementById("visual");
-      visualDiv.innerHTML = "";
-      var line = document.createElement("div");
-      line.className = "line";
-      for (var k = 0; k < denominator; k++) {
-        var segment = document.createElement("div");
-        segment.className = "segment";
-        if (k < numerator) {
-          segment.style.backgroundColor = "lightgray";
-        }
-        line.appendChild(segment);
-      }
-      visualDiv.appendChild(line);
-    }
-
-    // Fisher-Yates shuffle algorithm to randomize choices
-    function shuffleArray(array) {
-      for (var i = array.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var temp = array[i];
-        array[i] = array[j];
-        array[j] = temp;
       }
     }
 
